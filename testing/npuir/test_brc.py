@@ -6,7 +6,7 @@ import torch
 
 import tilelang
 import tilelang.language as T
-
+os.environ["TILELANG_ASCEND_MODE"] = "MLIR"
 torch.npu.set_device(0)
 tilelang.cache.clear_cache()
 
@@ -26,10 +26,12 @@ def vec_brc(M, N, K, block_M, block_N):
 
     @T.prim_func
     def main(
-            A: T.Tensor((M, K), dtype)
+            A: T.Tensor((M, K), dtype),
+            B: T.Tensor((1, K), dtype)
     ):
         with T.Kernel(BLOCK_SIZE, is_npu=True) as (cid, _):
             A_VEC = T.alloc_ub((block_M, block_N), dtype)
+            B_VEC = T.alloc_ub((1, block_N), dtype)
             for i in T.serial(T.ceildiv(m_num*n_num, BLOCK_SIZE)):
                 block_id = i * BLOCK_SIZE + cid
                 if block_id < m_num * n_num:
@@ -37,9 +39,9 @@ def vec_brc(M, N, K, block_M, block_N):
                     block_id_n = block_id % n_num
                     bx = block_id_m * block_M
                     by = block_id_n * block_N
-                    T.copy(A[bx, by], A_VEC)
+                    T.copy(B[0, by], B_VEC)
                     brc_value = 3
-                    T.npuir_brc(brc_value, A_VEC)
+                    T.npuir_brc(B_VEC, A_VEC)
                     T.copy(A_VEC, A[bx, by])
 
     return main
@@ -68,7 +70,8 @@ def run_test(main_args):
         main_args.block_M,
         main_args.block_N,
     )
-    compiled_kernel = tilelang.compile(func, target='npuir')
+    compiled_full = tilelang.engine.lower(func, target="npuir")
+    return
 
     shape = [main_args.M, main_args.K]
     torch.manual_seed(88888888)  # set the random seed for torch

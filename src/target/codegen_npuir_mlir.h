@@ -211,6 +211,8 @@ protected:
   std::unordered_map<const VarNode *, StorageInfo> alloc_storage_info_;
   // Get variable value 
   mlir::Value GetVarValue(const VarNode *v) const;
+  mlir::Value GetVarValue(const CallNode *region_node) const;
+  mlir::Value GetVarValue(const Buffer &buffer_data) const;
   // Get the corresponding thread index
   template <typename T>
   mlir::Value GetAndCastIndexOp(const IterVar iv);
@@ -229,7 +231,7 @@ private:
   void VcastCodegen(const CallNode *op);
   void VreduceCodegen(const CallNode *op);
   void VcumsumCodegen(const CallNode *op);
-  void VAtomicAddCodegen(const CallNode *op);
+  void VAtomicCodegen(const CallNode *op, hfusion::AtomicKind atomicKind);
   void VgatherCodegen(const CallNode *op);
   void VtransposeCodegen(const CallNode *op);
   void VinterleaveCodegen(const CallNode *op);
@@ -247,7 +249,9 @@ private:
   void VtanhCodegen(const CallNode *op);
   void DebugPrintCodegen(const CallNode *op);
   template <typename T> void CreateHIVMBinaryVectorOp(const CallNode *op);
+  template <typename T> void CreateLogicalVectorOp(const CallNode *op);
   template <typename T, typename U> void UnaryVecOpCodegen(const CallNode *op);
+  void ReluOpCodegen(const CallNode *op);
   void BarrierCodegen(const CallNode *op);
   void VselectCodegen(const CallNode *op);
   template <typename T, typename U>
@@ -262,6 +266,8 @@ private:
   mlir::Value GenMemrefLoadFromRegion(const BufferLoadNode *op);
   mlir::Value GenSubviewFromRegion(const CallNode *region_node);
   mlir::Value GenSubviewFromRegion(Buffer buffer_data, Array<Range> range);
+  mlir::Value GenExtractSliceFromRegion(const CallNode *region_node);
+  mlir::Value GenExtractSliceFromRegion(Buffer buffer_data, Array<Range> range);
   mlir::Value CreateIndexCastOp(mlir::Value src);
   std::pair<bool, mlir::Value> CheckMLIRValueMap(mlir::Value val);
   std::pair<bool, mlir::Value> CheckPrimExprMap(const PrimExprNode * op);

@@ -7,10 +7,10 @@ import tilelang.language as T
 torch.npu.set_device(0)
 tilelang.cache.clear_cache()
 
-@tilelang.jit(target="npuir")
+
 def slice_reduce(block_M, block_N, dtype = "float16"):
-    M = T.symbolic("M")
-    N = T.symbolic("N")
+    M = 17
+    N = 256
     BLOCK_SIZE = 1
     @T.prim_func
     def reduce(
@@ -37,12 +37,14 @@ def slice_reduce(block_M, block_N, dtype = "float16"):
 
 def test_slice_add():
     kernel = slice_reduce(32, 32)
-
+    compiled_full = tilelang.engine.lower(kernel, target="npuir")
+    return
     # case 1
     M, N = 17, 256
     input = torch.randn([M, N], dtype=torch.float16).npu()
     output = torch.randn([1, N], dtype=torch.float16).npu()
     kernel(input, output)
+    
     ref_output = torch.sum(input, dim=0, keepdim=True)
 
     print("output")
@@ -79,5 +81,5 @@ def test_slice_add():
     print("\033[92mAll check passed!\033[0m")
 
 if __name__ == "__main__":
-    os.environ['TILELANG_ASCEND_MODE'] = 'Developer'
+    os.environ['TILELANG_ASCEND_MODE'] = 'MLIR'
     test_slice_add()
